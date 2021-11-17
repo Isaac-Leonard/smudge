@@ -35,6 +35,7 @@
 (require 'smudge-api)
 (require 'smudge-track)
 (require 'smudge-playlist)
+(require 'smudge-podcast)
 (require 'smudge-device-select)
 (require 'smudge-controller)
 (require 'smudge-remote)
@@ -66,6 +67,15 @@
     (with-current-buffer buffer
       (smudge-playlist-search-mode)
       (smudge-playlist-search-update query 1))))
+
+;;;###autoload
+(defun smudge-podcast-search (query)
+  "Search for playlists that match the given QUERY string."
+  (interactive "sSpotify Search (Podcasts): ")
+  (let ((buffer (get-buffer-create (format "*Podcast Search: %s*" query))))
+    (with-current-buffer buffer
+      (smudge-podcast-search-mode)
+      (smudge-podcast-search-update query 1))))
 
 ;;;###autoload
 (defun smudge-recently-played ()

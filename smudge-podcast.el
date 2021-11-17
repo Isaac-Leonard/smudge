@@ -84,7 +84,7 @@
   "Fetch the given PAGE of QUERY results using the search endpoint."
   (let ((buffer (current-buffer)))
     (smudge-api-search
-     'podcast
+     'show
      query
      page
      (lambda (podcasts)
@@ -133,8 +133,7 @@
   "Displays the tracks that belongs to the podcast under the cursor."
   (interactive)
   (let* ((selected-podcast (tabulated-list-get-id))
-         (name (smudge-api-get-item-name selected-podcast))
-         (buffer (get-buffer-create (format "*Podcast Tracks: %s*" name))))
+         (buffer (get-buffer-create (format "*Podcast Tracks:*" ))))
     (with-current-buffer buffer
       (smudge-track-search-mode)
       (setq-local smudge-selected-podcast selected-podcast)
@@ -143,31 +142,20 @@
 (defun smudge-podcast-set-list-format ()
   "Configures the column data for the typical podcast view."
   (setq tabulated-list-format
-        (vector `("Podcast Name" ,(- (window-width) 45) t)
-                '("Owner Id" 30 t)
-                '("# Tracks" 8 (lambda (row-1 row-2)
-                                 (< (smudge-api-get-podcast-track-count (car row-1))
-                                    (smudge-api-get-podcast-track-count (car row-2)))) :right-align t))))
+        (vector `("Podcast Name" ,(- (window-width) 45) t))))
 
 (defun smudge-podcast-search-print (podcasts page)
   "Append PODCASTS to PAGE of the current podcast view."
   (let (entries)
     (dolist (podcast podcasts)
-      (let ((user-id (smudge-api-get-podcast-owner-id podcast))
-            (podcast-name (smudge-api-get-item-name podcast)))
-        (push (list podcast
-                    (vector (cons podcast-name
+      (let* ((podcast-name (smudge-api-get-item-name podcast))
+	    (entry (vector (cons podcast-name
                                   (list 'face 'link
                                         'follow-link t
                                         'action `(lambda (_) (smudge-podcast-tracks))
-                                        'help-echo (format "Show %s's tracks" podcast-name)))
-                            (cons user-id
-                                  (list 'face 'link
-                                        'follow-link t
-                                        'action `(lambda (_) (smudge-user-podcasts ,user-id))
-                                        'help-echo (format "Show %s's public podcasts" user-id)))
-                            (number-to-string (smudge-api-get-podcast-track-count podcast))))
-              entries)))
+                                        'help-echo (format "Show %s's episodes" podcast-name)))
+			   )))
+	(push (list podcast entry) entries)))
     (when (eq 1 page) (setq-local tabulated-list-entries nil))
     (smudge-podcast-set-list-format)
     (setq-local tabulated-list-entries (append tabulated-list-entries (nreverse entries)))
@@ -175,4 +163,43 @@
     (tabulated-list-print t)))
 
 (provide 'smudge-podcast)
+
+(defun smudge-track-podcast-tracks-update (page)
+  "Fetch PAGE of results for the current podcast."
+  (when (bound-and-true-p smudge-selected-podcast)
+    (let ((buffer (current-buffer)))
+      (smudge-api-podcast-episodes
+       smudge-selected-podcast
+       page
+       (lambda (json)
+             (with-current-buffer buffer
+               (setq-local smudge-current-page page)
+               (pop-to-buffer buffer)
+               (smudge-episode-search-print json page)
+               (message "Track view updated"))
+           (message "No more tracks"))))))
 ;;; smudge-podcast.el ends here
+
+(defun smudge-episode-search-print (episodes page)
+  "Append episodes to the PAGE of podcast view."
+  (let (entries)
+	(dolist (episode (gethash 'items episodes))
+	  (push (list episode
+                      (vector(gethash 'description episode)))
+		entries))
+	(message "before print")
+	(smudge-episode-search-set-list-format)
+	(when (eq 1 page) (setq-local tabulated-list-entries nil))
+	(setq-local tabulated-list-entries (append tabulated-list-entries (nreverse entries)))
+	(tabulated-list-init-header)
+	(tabulated-list-print t)))
+
+(defun smudge-episode-search-set-list-format ()
+  "Configure the column data for the typical episode view."
+  (message "Formatting")
+  (let* ((base-width (truncate (/ (- (window-width) 30) 3)))
+         (default-width base-width ))
+    (unless (bound-and-true-p smudge-selected-podcast)
+      (setq tabulated-list-sort-key `("#" . nil)))
+    (setq tabulated-list-format
+          (vconcat (vector `("Track Description" ,default-width t))))))

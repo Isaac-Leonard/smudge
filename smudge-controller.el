@@ -196,6 +196,13 @@ This corresponds to the current REPEATING state."
    (when track (smudge-api-get-item-uri track))
    (when context (smudge-api-get-item-uri context))))
 
+(defun smudge-controller-play-show (show)
+  "Sends a `play' command to Spotify process with show passing a CONTEXT id."
+  (interactive)
+  (message "testing")
+  (let (show (smudge-api-get-podcast-tracks show))
+    (smudge-controller-apply    "player-play-track" (smudge-api-get-item-uri show))))
+
 (defun smudge-controller-toggle-play ()
   "Sends a `playpause' command to Spotify process."
   (interactive)

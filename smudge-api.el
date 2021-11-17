@@ -347,6 +347,14 @@ Call CALLBACK with the parsed JSON response."
   "Return the owner id of the given playlist JSON object."
   (smudge-api-get-item-id (gethash 'owner json)))
 
+(defun smudge-api-get-podcast-episode-count (json)
+  "Return the number of episode of the given podcast JSON object."
+  (gethash 'total (gethash 'episodes json)))
+
+(defun smudge-api-get-podcast-owner-id (json)
+  "Return the owner id of the given podcast JSON object."
+  (smudge-api-get-item-id (gethash 'owner json)))
+
 (defun smudge-api-search (type query page callback)
   "Search artists, albums, tracks or playlists.
 Call CALLBACK with PAGE of items that match QUERY, depending on TYPE."
@@ -456,6 +464,20 @@ Call CALLBACK with results."
      (concat (format "/users/%s/playlists/%s/tracks?"
                      (url-hexify-string owner)
                      (url-hexify-string id))
+             (url-build-query-string `((limit  ,smudge-api-search-limit)
+                                       (offset ,offset)
+                                       (market from_token))
+                                     nil t))
+     nil
+     callback)))
+
+(defun smudge-api-podcast-episodes (podcast page callback)
+  "Call CALLBACK with PAGE of results of tracks from podcast."
+  (let (        (id (smudge-api-get-item-id podcast))
+        (offset (* smudge-api-search-limit (1- page))))
+    (smudge-api-call-async
+     "GET"
+     (concat (format "/shows/%s/episodes?" (url-hexify-string id))
              (url-build-query-string `((limit  ,smudge-api-search-limit)
                                        (offset ,offset)
                                        (market from_token))
@@ -597,4 +619,20 @@ Call CALLBACK if provided."
    callback))
 
 (provide 'smudge-api)
+
+(defun smudge-api-get-search-podcast-items (json)
+  "Return podcast items from the given search results JSON object."
+  (smudge-api-get-items (gethash 'shows json)))
+
+(defun smudge-api-get-podcast-tracks (json)
+  "Return the list of tracks from the given podcasts JSON object."
+  (message (format "%s" json))
+  (mapcar (lambda (item)
+            (gethash 'episode item))
+          (smudge-api-get-items json)))
+
+(defun smudge-api-get-podcast-track-count (json)
+  "Return the number of tracks of the given playlist JSON object."
+  (gethash 'total (gethash 'tracks json)))
+
 ;;; smudge-api.el ends here

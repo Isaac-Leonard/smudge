@@ -125,6 +125,17 @@ without a context."
          (smudge-track-album-tracks-update smudge-selected-album (1+ smudge-current-page)))
         ((bound-and-true-p smudge-query)
          (smudge-track-search-update smudge-query (1+ smudge-current-page)))))
+(defun smudge-track-load-all ()
+  "Load the tracks of the current track view"
+  (interactive)
+  (cond ((bound-and-true-p smudge-recently-played)
+         (smudge-track-recently-played-tracks-update (1+ smudge-current-page) t))
+        ((bound-and-true-p smudge-selected-playlist)
+         (smudge-track-playlist-tracks-update (1+ smudge-current-page) t))
+        ((bound-and-true-p smudge-selected-album)
+         (smudge-track-album-tracks-update smudge-selected-album (1+ smudge-current-page) t))
+        ((bound-and-true-p smudge-query)
+	 (message "Can't load all for searches"))))
 
 (defun smudge-track-search-update (query page)
   "Fetch the PAGE of results using QUERY at the search endpoint."
@@ -143,7 +154,7 @@ without a context."
              (message "Track view updated"))
          (message "No more tracks"))))))
 
-(defun smudge-track-playlist-tracks-update (page)
+(defun smudge-track-playlist-tracks-update (page &optional load-all)
   "Fetch PAGE of results for the current playlist."
   (when (bound-and-true-p smudge-selected-playlist)
     (let ((buffer (current-buffer)))
@@ -156,10 +167,12 @@ without a context."
                (setq-local smudge-current-page page)
                (pop-to-buffer buffer)
                (smudge-track-search-print items page)
-               (message "Track view updated"))
-           (message "No more tracks")))))))
+	       (if load-all (smudge-track-playlist-tracks-update (1+ smudge-current-page) t)
+		 (message "Track view updated")))
+	   (if load-all (message "Finished loading tracks")
+             (message "No more tracks"))))))))
 
-(defun smudge-track-album-tracks-update (album page)
+(defun smudge-track-album-tracks-update (album page &optional load-all)
   "Fetch PAGE of of tracks for ALBUM."
   (let ((buffer (current-buffer)))
     (smudge-api-album-tracks
@@ -172,10 +185,12 @@ without a context."
              (setq-local smudge-selected-album album)
              (pop-to-buffer buffer)
              (smudge-track-search-print items page)
-             (message "Track view updated"))
-         (message "No more tracks"))))))
+	     (if load-all (smudge-track-album-tracks-update smudge-selected-album (1+ smudge-current-page) t)
+             (message "Track view updated")))
+	 (if load-all (message "Finished loading tracks")
+	   (message "No more tracks")))))))
 
-(defun smudge-track-recently-played-tracks-update (page)
+(defun smudge-track-recently-played-tracks-update (page &optional t)
   "Fetch PAGE of results for the recently played tracks."
   (let ((buffer (current-buffer)))
     (smudge-api-recently-played
@@ -187,8 +202,10 @@ without a context."
              (setq-local smudge-recently-played t)
              (pop-to-buffer buffer)
              (smudge-track-search-print items page)
-             (message "Track view updated"))
-         (message "No more tracks"))))))
+	     (if load-all            (smudge-track-recently-played-tracks-update (1+ smudge-current-page) t)
+	       (message "Track view updated")))
+	 (if load-all (message "Finished loading tracks")
+         (message "No more tracks")))))))
 
 (defun smudge-track-search-set-list-format ()
   "Configure the column data for the typical track view.

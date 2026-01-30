@@ -45,15 +45,17 @@
   "Reloads the first page of results for the current playlist view."
   (interactive)
   (let ((page 1))
-    (cond ((bound-and-true-p smudge-query) (smudge-playlist-search-update smudge-query page))
-          (t (smudge-playlist-user-playlists-update smudge-user-id page)))))
+    (cond ((bound-and-true-p smudge-query)          (smudge-playlist-search-update smudge-query page))
+          ((bound-and-true-p smudge-browse-message) (smudge-playlist-featured-playlists-update page))
+          (t                                         (smudge-playlist-user-playlists-update (smudge-api-get-item-id smudge-user) page)))))
 
 (defun smudge-playlist-load-more ()
   "Load the next page of results for the current playlist view."
   (interactive)
   (let ((next-page (1+ smudge-current-page)))
-    (cond ((bound-and-true-p smudge-query) (smudge-playlist-search-update smudge-query next-page))
-          (t (smudge-playlist-user-playlists-update smudge-user-id next-page)))))
+    (cond ((bound-and-true-p smudge-query)          (smudge-playlist-search-update smudge-query next-page))
+          ((bound-and-true-p smudge-browse-message) (smudge-playlist-featured-playlists-update next-page))
+          (t                                         (smudge-playlist-user-playlists-update (smudge-api-get-item-id smudge-user) next-page)))))
 
 (defun smudge-playlist-follow ()
   "Add the current user as the follower of the playlist under the cursor."
